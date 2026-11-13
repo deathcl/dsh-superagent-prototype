@@ -1,7 +1,7 @@
 /** Probes repository and account CLIs, configures the worker execution environment and command shims, and tracks setup readiness. */
 import type { Context } from '@deepseek-ai/cordis'
 import { UserError } from '../core/index.ts'
-import { SETUP_FIELDS, resolveDeployment, resolveFeishuBot, workerProbe, type Deployment, type Machine } from '../deployment.ts'
+import { SETUP_FIELDS, resolveDeployment, resolveLocalDeployment, resolveFeishuBot, workerProbe, type Deployment, type Machine } from '../deployment.ts'
 import { agentVariables, applyEnvironment, verifyEnvironment, withoutDirectory, workerBin, writeEnvironment } from '../infra/environment.ts'
 import type { Settings, SettingsBlock } from '../policy.ts'
 import { SetupError, type SetupProblem } from '../setup.ts'
@@ -75,9 +75,20 @@ export class Setup {
   }
   private async resolve(settings: Settings): Promise<Deployment> {
     const { context, machine, lifetime } = this.host
-    const probe = this.probe()
-    const deployment = await resolveDeployment(machine, settings.sources.github?.config, probe)
-    const feishu = await resolveFeishuBot(machine, settings.sources.feishu?.config, probe).catch((error: unknown) => {
+    // Check if GitHub source is disabled for local mode
+    const githubSource = settings.sources.github
+    const isLocalMode = !githubSource?.enabled || (githubSource.config && Object.keys(githubSource.config).length === 0)
+    
+    let deployment: Deployment
+    if (isLocalMode) {
+      deployment = resolveLocalDeployment(machine)
+      context.logger.info('dsh-superagent running in local mode without GitHub integration')
+    } else {
+      const probe = this.probe()
+      deployment = await resolveDeployment(machine, settings.sources.github?.config, probe)
+    }
+    
+    const feishu = await resolveFeishuBot(machine, settings.sources.feishu?.config, this.probe()).catch((error: unknown) => {
       if (!(error instanceof SetupError)) throw error
       this.feishuProblem = error.problem
       context.logger.warn('dsh-superagent leaves Feishu out: %s', error.message)

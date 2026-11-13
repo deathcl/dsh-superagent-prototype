@@ -8,7 +8,23 @@ dsh-superagent is a proactive coding agent for one GitHub repository, packaged a
 
 It is also a way of working with an agent: **take as little human attention as possible, and give as much value as possible.** An agent that can act for a whole team can also waste a whole team's attention, so it acts only when asked or when a rule the team wrote allows it, and speaks only when someone must act or can use a result. [docs/000-philosophy.md](docs/000-philosophy.md) explains the principle and what it asks of the operator.
 
+## Local mode (this fork)
+
+This fork adds a **local mode**: run dsh-superagent as an interactive development agent without any GitHub or Feishu source. You talk to its main Session from the web panel; it opens tickets internally and runs each in its own worker session and directory. No repository polling, no external accounts required.
+
+When the GitHub Source is disabled, setup resolves a minimal local deployment instead of probing a CLI and repository, and the worker shims and git credential configuration are skipped. Windows support was added alongside it: `pwsh` replaces `bash` on Windows, absolute paths accept drive letters (`C:/...`), and subprocess commands pass environment overrides directly instead of through the Unix-only `env` wrapper.
+
+To run it on Windows, create a DSH profile whose bundle list includes this package, set `stateDir` (an absolute path) and a free port in the profile's `cordis.patch.yml`, then use the launcher:
+
+```powershell
+.\start-superagent.ps1        # start the service and open the panel
+.\start-superagent.ps1 -Stop  # stop the service cleanly
+```
+
+The panel prints its URL with a token at startup; the sidebar's Superagent entry is where you work with the agent.
+
 ## Setup
+
 
 Setup has many steps, so an agent does it with you. Ask your coding agent:
 
